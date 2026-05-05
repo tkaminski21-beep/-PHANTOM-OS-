@@ -1,4 +1,4 @@
-# CardPuter Advanced OS v3.0.0-PL
+# CardPuter Advanced OS v3.0.0-PL     https://tkaminski21-beep.github.io/-PHANTOM-OS-/
 
 Potężny system operacyjny dla **M5Stack CardPuter** w języku polskim.  
 **30+ aplikacji**, kompatybilny z M5Launcher, obsługa Bruce i innych `.bin`.
