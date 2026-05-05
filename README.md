@@ -167,5 +167,5 @@ Lub skopiuj `CardputerOS.bin` do `/apps/` i uruchom z M5Launcher.
 
 ---
 
-*CardPuter Advanced OS v3.0.0-PL · 30+ aplikacji · język polski*
+
 
