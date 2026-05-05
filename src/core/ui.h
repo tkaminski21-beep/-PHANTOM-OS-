@@ -19,9 +19,20 @@
 #include <Arduino.h>
 #include <vector>
 
+
 extern uint16_t UI_BG;
 extern uint16_t UI_FG;
 extern uint16_t UI_PRI;
+// Deklaracje klawiatury i sterowania
+extern void input_update();
+extern bool EscPress;
+extern bool SelPress;
+extern bool AnyKeyPress;
+extern bool PrevPress;
+extern bool NextPress;
+extern char LastChar;
+extern int LastFn;
+
 
 // ─── Nagłówek ─────────────────────────────────────────
 void ui_draw_header(const char* title, uint32_t color = 0) {
