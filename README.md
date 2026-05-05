@@ -1,18 +1,13 @@
- 🚀 Zobacz prezentację PHANTOM OS online!  https://tkaminski21-beep.github.io/-PHANTOM-OS-/
- 
- 
- 
- 
- CardPuter Advanced OS v3.0.0-PL
+# CardPuter Advanced OS v3.0.0-PL
 
 Potężny system operacyjny dla **M5Stack CardPuter** w języku polskim.  
 **30+ aplikacji**, kompatybilny z M5Launcher, obsługa Bruce i innych `.bin`.
 
 ---
 
- Pełna lista aplikacji
+## 📱 Pełna lista aplikacji
 
- Narzędzia (zakładka 1)
+### 🛠️ Narzędzia (zakładka 1)
 | Aplikacja | Opis |
 |---|---|
 | Notatnik | Twórz/czytaj/usuwaj notatki — SD |
@@ -25,7 +20,7 @@ Potężny system operacyjny dla **M5Stack CardPuter** w języku polskim.
 | Zegar / Czas | Zegar NTP · stoper z okrążeniami · minutnik z animacją · kalendarz |
 | Notatnik AES | Notatki szyfrowane kluczem — zapis `.enc` na SD |
 
- Sieć (zakładka 2)
+### 🌐 Sieć (zakładka 2)
 | Aplikacja | Opis |
 |---|---|
 | Wi-Fi Manager | Skanuj · łącz · zapisz hasło · NTP · status IP |
@@ -37,7 +32,7 @@ Potężny system operacyjny dla **M5Stack CardPuter** w języku polskim.
 | Klient MQTT | Połącz z brokerem · publish do tematu |
 | Odtwarzacz MP3 | Pliki `.mp3` z SD · I2S · lista · głośność |
 
- Hardware / Elektronika (zakładka 3)
+### ⚡ Hardware / Elektronika (zakładka 3)
 | Aplikacja | Opis |
 |---|---|
 | Oscyloskop ADC | Próbkowanie GPIO1 · wykres · Vpp · Vavg · ~freq · wyzwalanie |
@@ -50,7 +45,7 @@ Potężny system operacyjny dla **M5Stack CardPuter** w języku polskim.
 | Skaner BLE | BLE advertise scan · nazwy · adresy · RSSI |
 | Wygaszacz ekranu | Matrix · gwiazdki · zegar bounce |
 
- System / Gry (zakładka 4)
+### 💾 System / Gry (zakładka 4)
 | Aplikacja | Opis |
 |---|---|
 | **M5Launcher / .bin** | Uruchom Bruce/M5Launcher z SD przez OTA · przełącz partycję |
@@ -66,7 +61,7 @@ Potężny system operacyjny dla **M5Stack CardPuter** w języku polskim.
 
 ---
 
- Sterowanie
+## ⌨️ Sterowanie
 
 | Klawisz | Akcja |
 |---|---|
@@ -80,7 +75,7 @@ Potężny system operacyjny dla **M5Stack CardPuter** w języku polskim.
 | `FN + B` | Podświetlenie off/on |
 | `FN + Q` | Wyjście z aplikacji |
 
- W aplikacjach
+### W aplikacjach
 | Klawisz | Akcja |
 |---|---|
 | `W/S` | Góra/dół · scroll |
@@ -99,26 +94,26 @@ Potężny system operacyjny dla **M5Stack CardPuter** w języku polskim.
 
 ---
 
- Instalacja
+## 🚀 Instalacja
 
- Krok 1 — VS Code + PlatformIO
+### Krok 1 — VS Code + PlatformIO
 ```
 code.visualstudio.com → zainstaluj
 VS Code Extensions → PlatformIO IDE → Install
 ```
 
- Krok 2 — Otwórz projekt
+### Krok 2 — Otwórz projekt
 ```
 File → Open Folder → wybierz CardputerOS3
 ```
 
- Krok 3 — Wgraj
+### Krok 3 — Wgraj
 ```
 PlatformIO (mrówka) → m5stack-cardputer → Upload
 ```
 lub dolny pasek → strzałka → Upload
 
- Krok 4 — Karta SD (FAT32)
+### Krok 4 — Karta SD (FAT32)
 ```
 /apps/          ← .bin aplikacje (Bruce, M5Launcher, itp.)
 /music/         ← pliki .mp3
@@ -129,7 +124,7 @@ lub dolny pasek → strzałka → Upload
 
 ---
 
-Uruchamianie Bruce / M5Launcher
+## 🔄 Uruchamianie Bruce / M5Launcher
 
 1. Skopiuj `bruce.bin` lub `M5Launcher.bin` do `/apps/` na karcie SD
 2. W OS: zakładka **SYS** → **M5Launcher / .bin**
@@ -143,7 +138,7 @@ Lub skopiuj `CardputerOS.bin` do `/apps/` i uruchom z M5Launcher.
 
 ---
 
- Piny sprzętowe
+## 🔌 Piny sprzętowe
 
 | Funkcja | Pin |
 |---|---|
@@ -162,7 +157,7 @@ Lub skopiuj `CardputerOS.bin` do `/apps/` i uruchom z M5Launcher.
 
 ---
 
-  Specyfikacja
+## ⚙️ Specyfikacja
 
 - **Chipset**: ESP32-S3 @ 240 MHz  
 - **RAM**: 320 KB + 8 MB PSRAM  
@@ -172,5 +167,4 @@ Lub skopiuj `CardputerOS.bin` do `/apps/` i uruchom z M5Launcher.
 
 ---
 
-
-
+*CardPuter Advanced OS v3.0.0-PL · 30+ aplikacji · język polski*
