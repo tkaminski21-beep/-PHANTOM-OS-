@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHANTOM OS - Prezentacja</title>
+    <style>
+        :root {
+            --bg-color: #0d0221;
+            --accent-color: #9d4edd;
+            --text-color: #e0aaff;
+            --card-bg: #1e0b36;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .container {
+            width: 80%;
+            max-width: 900px;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 20px;
+            border: 2px solid var(--accent-color);
+            box-shadow: 0 0 20px var(--accent-color);
+            text-align: center;
+        }
+        .slide { display: none; animation: fadeIn 0.5s; }
+        .slide.active { display: block; }
+        h1 { color: #fff; text-shadow: 0 0 10px var(--accent-color); font-size: 2.5em; }
+        p { font-size: 1.2em; line-height: 1.6; }
+        .feature-list { text-align: left; display: inline-block; margin: 20px 0; }
+        .controls { margin-top: 30px; }
+        button {
+            background: var(--accent-color);
+            border: none;
+            color: white;
+            padding: 10px 25px;
+            font-size: 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 0 10px;
+            transition: 0.3s;
+        }
+        button:hover { background: #c77dff; transform: scale(1.1); }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .badge { background: #ff0054; color: white; padding: 5px 10px; border-radius: 5px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Slajd 1 -->
+    <div class="slide active">
+        <span class="badge">WERSJA BETA</span>
+        <h1>PHANTOM OS</h1>
+        <p>Potężny system operacyjny dla <strong>M5Stack Cardputer ADV</strong>.</p>
+        <p>Najbardziej zaawansowane środowisko w języku polskim.</p>
+    </div>
+
+    <!-- Slajd 2 -->
+    <div class="slide">
+        <h1>Możliwości Systemu</h1>
+        <div class="feature-list">
+            <p>✅ <strong>30+ wbudowanych aplikacji</strong> (narzędzia, gry, multimedia).</p>
+            <p>✅ Kompatybilność z <strong>M5Launcherem</strong>.</p>
+            <p>✅ Pełne wsparcie dla plików <strong>.bin</strong> (np. Bruce).</p>
+            <p>✅ Zoptymalizowany interfejs pod ekran Cardputera.</p>
+        </div>
+    </div>
+
+    <!-- Slajd 3 -->
+    <div class="slide">
+        <h1>Status Projektu & Plany</h1>
+        <p>Obecnie pracujemy nad stabilizacją wersji Beta.</p>
+        <div class="feature-list">
+            <p>🌍 <strong>Globalizacja:</strong> Wydanie wersji angielskiej (EN).</p>
+            <p>⚙️ <strong>Language Selector:</strong> Dynamiczny wybór języka w menu.</p>
+            <p>🛠️ <strong>Aktualizacje OTA:</strong> Łatwiejsze wgrywanie poprawek.</p>
+        </div>
+    </div>
+
+    <!-- Slajd 4 -->
+    <div class="slide">
+        <h1>Dołącz do Społeczności</h1>
+        <p>Projekt jest dostępny na GitHubie dla każdego entuzjasty ESP32.</p>
+        <p>Sprawdź kod, zgłoś błędy i pomóż nam budować Phantom OS!</p>
+        <button onclick="window.location.href='https://github.com/tkaminski21-beep/-PHANTOM-OS-'">Odwiedź GitHub</button>
+    </div>
+
+    <div class="controls">
+        <button onclick="changeSlide(-1)">Poprzedni</button>
+        <button onclick="changeSlide(1)">Następny</button>
+    </div>
+</div>
+
+<script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+
+    function changeSlide(n) {
+        slides[currentSlide].classList.remove('active');
+        currentSlide = (currentSlide + n + slides.length) % slides.length;
+        slides[currentSlide].classList.add('active');
+    }
+</script>
+
+</body>
+</html>
