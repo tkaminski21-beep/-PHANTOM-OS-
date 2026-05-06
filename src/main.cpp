@@ -17,6 +17,7 @@
 #include "core/ui.h"
 #include "core/bootloader.h"
 #include "core/sound.h"
+#include "core/i18n.h"
 
 #include "apps/app_notes.h"
 #include "apps/app_resistor.h"
@@ -53,6 +54,7 @@
 #include "apps/app_pogoda.h"
 #include "apps/app_rfid.h"
 #include "apps/app_radio.h"
+
 
 Preferences prefs;
 bool        sd_ok = false;
@@ -494,52 +496,167 @@ unsigned long _last_sb = 0;
 bool full_redraw = true;
 
 // ═══════════════════════════════════════════════════════
-//  RYSOWANIE — partial update bez migotania
+//  RYSOWANIE — siatka 2x3 ikon (jak launcher smartfona)
 //
-//  full_redraw = pełne odświeżenie (statusbar, ramka)
-//  Przy zmianie kafelka odświeżamy TYLKO wnętrze ramki
-//  (od y=24 do y=120, x=6 do x=234) — bez fillScreen!
+//  Layout 240x135:
+//   ┌───────────────────────────────┐
+//   │ status bar (godz, sd, %)      │ y=0..18
+//   ├───────────────────────────────┤
+//   │ [  1  ] [  2  ] [  3  ]       │ y=22..72  (3 ikony w rzędzie 1)
+//   │ [  4  ] [  5  ] [  6  ]       │ y=74..124 (3 ikony w rzędzie 2)
+//   ├───────────────────────────────┤
+//   │ Nazwa wybranego  [n/total]    │ y=126..134
+//   └───────────────────────────────┘
+//
+//  Wybrany kafelek: pełne tło UI_PRI, ikona w UI_BG
+//  Reszta: cienka ramka UI_PRI, ikona UI_PRI
 // ═══════════════════════════════════════════════════════
+
+const int GRID_COLS = 3;
+const int GRID_ROWS = 2;
+const int TILES_PER_PAGE = 6;
+const int TILE_W = 74;
+const int TILE_H = 50;
+const int GRID_X0 = 9;
+const int GRID_Y0 = 22;
+const int GRID_GAP_X = 4;
+const int GRID_GAP_Y = 4;
+
+// Pomocniczy kolor (przyciemniony UI_PRI)
+inline uint16_t _dim_pri(int factor = 2) {
+    uint8_t r = ((UI_PRI >> 11) & 0x1F) >> factor;
+    uint8_t g = ((UI_PRI >> 5)  & 0x3F) >> factor;
+    uint8_t b = (UI_PRI & 0x1F) >> factor;
+    return (r << 11) | (g << 5) | b;
+}
+
+void draw_tile_at(int slot, int tileIdx, bool active) {
+    int row = slot / GRID_COLS;
+    int col = slot % GRID_COLS;
+    int x = GRID_X0 + col * (TILE_W + GRID_GAP_X);
+    int y = GRID_Y0 + row * (TILE_H + GRID_GAP_Y);
+
+    if (tileIdx >= N_TILES) {
+        M5Cardputer.Display.fillRect(x, y, TILE_W, TILE_H, (uint32_t)UI_BG);
+        return;
+    }
+
+    if (active) {
+        // Aktywny: pełne tło UI_PRI z lekko jaśniejszą ramką
+        M5Cardputer.Display.fillRoundRect(x, y, TILE_W, TILE_H, 5, (uint32_t)UI_PRI);
+        M5Cardputer.Display.drawRoundRect(x, y, TILE_W, TILE_H, 5, (uint32_t)UI_PRI);
+        M5Cardputer.Display.drawRoundRect(x+1, y+1, TILE_W-2, TILE_H-2, 4, (uint32_t)UI_BG);
+
+        // Ikona - wycentrowana, mniejsza wersja
+        int cx = x + TILE_W/2;
+        int cy = y + TILE_H/2 - 4;
+        // Rysuj prostą ikonę w środku - kółko z numerem
+        M5Cardputer.Display.fillCircle(cx, cy, 12, (uint32_t)UI_PRI);
+        M5Cardputer.Display.setTextColor((uint32_t)UI_BG, (uint32_t)UI_PRI);
+        M5Cardputer.Display.setTextSize(1);
+        char num[6]; snprintf(num, sizeof(num), "%02d", tileIdx + 1);
+        M5Cardputer.Display.setCursor(cx - 6, cy - 3);
+        M5Cardputer.Display.print(num);
+
+        // Skrócona nazwa pod ikoną
+        const char* lbl = TILES[tileIdx].label;
+        int maxlen = 11;
+        char shortn[14];
+        if ((int)strlen(lbl) > maxlen) {
+            strncpy(shortn, lbl, maxlen);
+            shortn[maxlen] = 0;
+        } else strcpy(shortn, lbl);
+        int sw = strlen(shortn) * 6;
+        M5Cardputer.Display.setTextColor((uint32_t)UI_PRI, (uint32_t)UI_BG);
+        M5Cardputer.Display.setCursor(x + (TILE_W - sw)/2, y + TILE_H - 12);
+        M5Cardputer.Display.print(shortn);
+    } else {
+        // Nieaktywny: cienka ramka, mała ikona
+        M5Cardputer.Display.fillRect(x, y, TILE_W, TILE_H, (uint32_t)UI_BG);
+        uint16_t dim = _dim_pri(2);
+        M5Cardputer.Display.drawRoundRect(x, y, TILE_W, TILE_H, 5, dim);
+
+        // Numer w lewym górnym rogu
+        M5Cardputer.Display.setTextColor(dim, (uint32_t)UI_BG);
+        M5Cardputer.Display.setTextSize(1);
+        M5Cardputer.Display.setCursor(x + 4, y + 4);
+        char num[6]; snprintf(num, sizeof(num), "%02d", tileIdx + 1);
+        M5Cardputer.Display.print(num);
+
+        // Skrócona nazwa
+        const char* lbl = TILES[tileIdx].label;
+        int maxlen = 11;
+        char shortn[14];
+        if ((int)strlen(lbl) > maxlen) {
+            strncpy(shortn, lbl, maxlen);
+            shortn[maxlen] = 0;
+        } else strcpy(shortn, lbl);
+        int sw = strlen(shortn) * 6;
+        M5Cardputer.Display.setTextColor((uint32_t)UI_FG, (uint32_t)UI_BG);
+        M5Cardputer.Display.setCursor(x + (TILE_W - sw)/2, y + TILE_H/2 + 2);
+        M5Cardputer.Display.print(shortn);
+    }
+}
+
+void draw_grid_page(int page) {
+    int start = page * TILES_PER_PAGE;
+    for (int slot = 0; slot < TILES_PER_PAGE; slot++) {
+        int idx = start + slot;
+        bool active = (idx == aktTile);
+        draw_tile_at(slot, idx, active);
+    }
+}
+
+void draw_bottom_bar() {
+    // Pasek na dole - nazwa wybranej + pozycja
+    M5Cardputer.Display.fillRect(0, 124, 240, 11, (uint32_t)UI_BG);
+    uint16_t dim = _dim_pri(2);
+    M5Cardputer.Display.drawLine(0, 124, 240, 124, dim);
+
+    // Pełna nazwa wybranego kafelka po lewej
+    M5Cardputer.Display.setTextColor((uint32_t)UI_PRI, (uint32_t)UI_BG);
+    M5Cardputer.Display.setTextSize(1);
+    M5Cardputer.Display.setCursor(4, 127);
+    M5Cardputer.Display.print(TILES[aktTile].label);
+
+    // Numer strony / pozycji po prawej
+    int totalPages = (N_TILES + TILES_PER_PAGE - 1) / TILES_PER_PAGE;
+    int currPage = aktTile / TILES_PER_PAGE + 1;
+    char info[12]; snprintf(info, sizeof(info), "%d/%d", currPage, totalPages);
+    int iw = strlen(info) * 6;
+    M5Cardputer.Display.setCursor(238 - iw, 127);
+    M5Cardputer.Display.print(info);
+
+    // Mini paski pozycji (kropki stron)
+    int dotX = 240/2 - (totalPages * 6)/2;
+    for (int i = 0; i < totalPages; i++) {
+        if (i == currPage - 1)
+            M5Cardputer.Display.fillCircle(dotX + i*6, 129, 1, (uint32_t)UI_PRI);
+        else
+            M5Cardputer.Display.drawCircle(dotX + i*6, 129, 1, dim);
+    }
+}
+
+int prev_page = -1;
+
 void draw_tile_area() {
-    // Tylko wnętrze ramki — żeby nie było migotania
+    int currPage = aktTile / TILES_PER_PAGE;
     M5Cardputer.Display.startWrite();
-
-    // Wymaż obszar ikony i nazwy
-    M5Cardputer.Display.fillRect(6, 24, 228, 96, (uint32_t)UI_BG);
-
-    // Strzałki na bokach (wewnątrz ramki)
-    if (aktTile > 0)
-        M5Cardputer.Display.fillTriangle(13,72, 22,62, 22,82, (uint32_t)UI_PRI);
-    if (aktTile < N_TILES - 1)
-        M5Cardputer.Display.fillTriangle(227,72, 218,62, 218,82, (uint32_t)UI_PRI);
-
-    // Ikona
-    TILES[aktTile].draw_icon((uint32_t)UI_PRI);
-
+    if (currPage != prev_page) {
+        // Pełne odświeżenie strony
+        draw_grid_page(currPage);
+        prev_page = currPage;
+    } else {
+        // Tylko 2 kafelki - poprzedni i nowy
+        // (faktycznie redrawowane w loop poprzez zmianę aktTile)
+        draw_grid_page(currPage);
+    }
     M5Cardputer.Display.endWrite();
 }
 
 void draw_label_area() {
     M5Cardputer.Display.startWrite();
-    // Wymaż obszar etykiety
-    M5Cardputer.Display.fillRect(0, 113, 240, 22, (uint32_t)UI_BG);
-
-    // Etykieta - duża czcionka
-    M5Cardputer.Display.setTextSize(2);
-    const char* lbl = TILES[aktTile].label;
-    int llen = strlen(lbl) * 12;
-    if (llen > 220) { M5Cardputer.Display.setTextSize(1); llen = strlen(lbl)*6; }
-    M5Cardputer.Display.setTextColor((uint32_t)UI_PRI, (uint32_t)UI_BG);
-    M5Cardputer.Display.setCursor((240 - llen) / 2, 116);
-    M5Cardputer.Display.print(lbl);
-    M5Cardputer.Display.setTextSize(1);
-
-    // Pasek pozycji na samym dole
-    int barX = 5, barY = 132, barW = 230;
-    M5Cardputer.Display.drawLine(barX, barY, barX+barW, barY, (uint32_t)UI_PRI & 0x2104);
-    int markX = barX + aktTile * barW / max(1, N_TILES-1);
-    M5Cardputer.Display.fillRect(markX-3, barY-2, 7, 5, (uint32_t)UI_PRI);
-
+    draw_bottom_bar();
     M5Cardputer.Display.endWrite();
 }
 
@@ -547,7 +664,7 @@ void draw_full() {
     M5Cardputer.Display.startWrite();
     M5Cardputer.Display.fillScreen((uint32_t)UI_BG);
     draw_statusbar();
-    M5Cardputer.Display.drawRoundRect(5, 24, 230, 88, 5, (uint32_t)UI_PRI);
+    prev_page = -1;
     M5Cardputer.Display.endWrite();
     draw_tile_area();
     draw_label_area();
@@ -629,18 +746,29 @@ void menu_screensaver_time() {
     }
 }
 
+void menu_jezyk() {
+    const char* opts[] = { "Polski", "English" };
+    int sel = ui_select_list(opts, 2, T("language"), (uint32_t)UI_PRI);
+    if (sel < 0) return;
+    i18n_set(sel);
+    prefs.putBool("lang_set", true);
+    ui_show_info(T("saved"), 0x07E0);
+    delay(1000);
+}
+
 void w_ustawienia() {
     while (true) {
         const char* opts[] = {
-            "Presety kolorow",
-            "Edytor RGB",
-            "Jasnosc ekranu",
-            "Dzwiek (on/off)",
-            "Wygaszacz - czas",
-            "Wygaszacz - test",
-            "Info systemu",
+            T("color_presets"),
+            T("rgb_editor"),
+            T("brightness"),
+            T("sound_toggle"),
+            T("screensaver_time"),
+            T("screensaver"),
+            T("language"),
+            T("system_info"),
         };
-        int sel = ui_select_list(opts, 7, "USTAWIENIA", (uint32_t)UI_PRI);
+        int sel = ui_select_list(opts, 8, T("settings"), (uint32_t)UI_PRI);
         if (sel < 0) return;
         if (sel==0) menu_preset_kolorow();
         if (sel==1) edit_custom_colors();
@@ -649,13 +777,14 @@ void w_ustawienia() {
             bool e = snd::enabled();
             snd::set_enabled(!e);
             if (!e) snd::success();
-            ui_show_info(!e ? "Dzwiek: ON" : "Dzwiek: OFF", (uint32_t)UI_PRI);
+            ui_show_info(!e ? T("on") : T("off"), (uint32_t)UI_PRI);
             delay(1200);
         }
         if (sel==4) menu_screensaver_time();
         if (sel==5) app_screensaver_menu();
-        if (sel==6) {
-            ui_draw_header("INFO SYSTEMU", (uint32_t)UI_PRI);
+        if (sel==6) menu_jezyk();
+        if (sel==7) {
+            ui_draw_header(T("system_info"), (uint32_t)UI_PRI);
             M5Cardputer.Display.setTextColor((uint32_t)UI_FG,(uint32_t)UI_BG);
             M5Cardputer.Display.setCursor(8,26); M5Cardputer.Display.print("PHANTOM OS v1.1");
             M5Cardputer.Display.setCursor(8,40); M5Cardputer.Display.print("ESP32-S3 StampS3");
@@ -680,19 +809,124 @@ void w_ustawienia() {
     }
 }
 
-// Linie 682 i wyżej
-bool EscPress = false;
-bool SelPress = false;
-bool AnyKeyPress = false;
-bool PrevPress = false;
-bool NextPress = false;
-char LastChar = 0;
-int LastFn = 0;
+// ═══════════════════════════════════════════════════════
+//  SETUP
+// ═══════════════════════════════════════════════════════
 
-void input_update() {
-    M5Cardputer.update();
+// ═══════════════════════════════════════════════════════
+//  PIERWSZE URUCHOMIENIE — wybór języka
+//  Wywoływane gdy klucz "lang_set" nie istnieje w Preferences
+// ═══════════════════════════════════════════════════════
+void first_run_language() {
+    M5Cardputer.Display.fillScreen(0x0000);
+
+    // Animowane tło - kropki w gradient
+    for (int y = 0; y < 135; y++) {
+        uint8_t b = (y * 18 / 135);
+        M5Cardputer.Display.drawFastHLine(0, y, 240, ((uint16_t)b & 0x1F));
+    }
+
+    // Powitanie - duże, na środku
+    M5Cardputer.Display.setTextColor(0xFFFF, 0x0000);
+    M5Cardputer.Display.setTextSize(2);
+    M5Cardputer.Display.setCursor(34, 14);
+    M5Cardputer.Display.print("PHANTOM OS");
+    M5Cardputer.Display.setTextSize(1);
+    M5Cardputer.Display.setTextColor(0x07FF, 0x0000);
+    M5Cardputer.Display.setCursor(56, 36);
+    M5Cardputer.Display.print("Pierwsze uruchomienie");
+    M5Cardputer.Display.setCursor(70, 48);
+    M5Cardputer.Display.print("First time setup");
+
+    // Linia oddzielająca
+    M5Cardputer.Display.drawLine(20, 62, 220, 62, 0x7BEF);
+
+    // Etykieta
+    M5Cardputer.Display.setTextColor(0xFFE0, 0x0000);
+    M5Cardputer.Display.setTextSize(1);
+    M5Cardputer.Display.setCursor(20, 70);
+    M5Cardputer.Display.print("Wybierz jezyk / Select language:");
+
+    // Dwie opcje (lewa/prawa)
+    int sel = 0;
+    bool redraw = true;
+    snd::boot();  // dźwięk powitania
+
+    while (true) {
+        if (redraw) {
+            // Wyczyść obszar opcji
+            M5Cardputer.Display.fillRect(0, 84, 240, 36, 0x0000);
+
+            // OPCJA 1: Polski
+            int x1 = 18, y1 = 88, w = 95, h = 28;
+            uint16_t col1 = (sel == 0) ? 0xF81F : 0x4208;
+            uint16_t txt1 = (sel == 0) ? 0xFFFF : 0xC618;
+            uint16_t bg1  = (sel == 0) ? 0xF81F : 0x0000;
+            if (sel == 0) {
+                M5Cardputer.Display.fillRoundRect(x1, y1, w, h, 5, col1);
+            } else {
+                M5Cardputer.Display.drawRoundRect(x1, y1, w, h, 5, col1);
+            }
+            M5Cardputer.Display.setTextColor(txt1, bg1);
+            M5Cardputer.Display.setTextSize(2);
+            M5Cardputer.Display.setCursor(x1 + 14, y1 + 7);
+            M5Cardputer.Display.print("PL");
+            M5Cardputer.Display.setTextSize(1);
+            M5Cardputer.Display.setCursor(x1 + 42, y1 + 11);
+            M5Cardputer.Display.print("Polski");
+
+            // OPCJA 2: English
+            int x2 = 127, y2 = 88;
+            uint16_t col2 = (sel == 1) ? 0x07FF : 0x4208;
+            uint16_t txt2 = (sel == 1) ? 0xFFFF : 0xC618;
+            uint16_t bg2  = (sel == 1) ? 0x07FF : 0x0000;
+            if (sel == 1) {
+                M5Cardputer.Display.fillRoundRect(x2, y2, w, h, 5, col2);
+            } else {
+                M5Cardputer.Display.drawRoundRect(x2, y2, w, h, 5, col2);
+            }
+            M5Cardputer.Display.setTextColor(txt2, bg2);
+            M5Cardputer.Display.setTextSize(2);
+            M5Cardputer.Display.setCursor(x2 + 14, y2 + 7);
+            M5Cardputer.Display.print("EN");
+            M5Cardputer.Display.setTextSize(1);
+            M5Cardputer.Display.setCursor(x2 + 42, y2 + 11);
+            M5Cardputer.Display.print("English");
+
+            // Stopka - instrukcja
+            M5Cardputer.Display.setTextColor(0x7BEF, 0x0000);
+            M5Cardputer.Display.setCursor(28, 124);
+            M5Cardputer.Display.print("FN+,/+/= zmien    OK = potwierdz");
+
+            redraw = false;
+        }
+
+        input_update();
+        if (PrevPress || NextPress) {
+            sel = 1 - sel;  // toggle 0/1
+            snd::tick();
+            redraw = true;
+        }
+        if (SelPress) {
+            // Zatwierdź wybór
+            i18n_set(sel);
+            prefs.putBool("lang_set", true);  // marker że już ustawiliśmy
+            snd::confirm();
+
+            // Animacja potwierdzenia
+            M5Cardputer.Display.fillScreen(0x0000);
+            M5Cardputer.Display.setTextColor(0x07E0, 0x0000);
+            M5Cardputer.Display.setTextSize(2);
+            const char* msg = (sel == 0) ? "OK! Polski" : "OK! English";
+            int len = strlen(msg) * 12;
+            M5Cardputer.Display.setCursor((240 - len) / 2, 56);
+            M5Cardputer.Display.print(msg);
+            delay(1200);
+            return;
+        }
+        delay(20);
+    }
 }
-
 
 void setup() {
     auto cfg = M5.config();
@@ -705,6 +939,7 @@ void setup() {
 
     prefs.begin("cardputer_os", false);
     load_colors();
+    i18n_load();
 
     int jasnosc = prefs.getInt("brightness", 128);
     if (jasnosc < 10) jasnosc = 128;
@@ -713,46 +948,73 @@ void setup() {
     M5Cardputer.Speaker.setVolume(64);
 
     draw_splash();
-    snd::boot();
 
-    // ─── INICJALIZACJA KARTY SD (Bruce-style, multi-attempt) ───
-    // Cardputer/CardputerADV: SCK=40, MISO=39, MOSI=14, CS=12
-    pinMode(PIN_SD_CS, OUTPUT);
-    digitalWrite(PIN_SD_CS, HIGH);
-    delay(50);
+    // Sprawdź czy to pierwsze uruchomienie - wybór języka
+    if (!prefs.getBool("lang_set", false)) {
+        first_run_language();
+    } else {
+        snd::boot();
+    }
 
-    // SPI z explicite podanymi pinami (kolejność Arduino: SCK, MISO, MOSI, SS)
-    SPI.begin(PIN_SD_SCK, PIN_SD_MISO, PIN_SD_MOSI, PIN_SD_CS);
+    // ─── INICJALIZACJA KARTY SD ────────────────────────
+    // Cardputer/ADV: SCK=40, MISO=39, MOSI=14, CS=12
+    // Po M5Cardputer.begin() trzeba reset SPI bo M5 mogło zająć piny
+    SPI.end();
     delay(20);
 
-    // Próba 1: standardowa szybkość 25MHz
-    sd_ok = SD.begin(PIN_SD_CS, SPI, 25000000);
-    // Próba 2: niższa szybkość (4MHz) jeśli pierwszej nie udało się
+    pinMode(PIN_SD_CS, OUTPUT);
+    digitalWrite(PIN_SD_CS, HIGH);
+    pinMode(PIN_SD_SCK, OUTPUT);
+    pinMode(PIN_SD_MOSI, OUTPUT);
+    pinMode(PIN_SD_MISO, INPUT_PULLUP);  // pullup wymagany dla SD!
+    delay(50);
+
+    SPI.begin(PIN_SD_SCK, PIN_SD_MISO, PIN_SD_MOSI, PIN_SD_CS);
+    SPI.setFrequency(1000000);  // start na NISKIEJ częstotliwości
+    delay(50);
+
+    // Próba 1: 4 MHz (bezpieczna wartość startowa)
+    sd_ok = SD.begin(PIN_SD_CS, SPI, 4000000);
+    Serial.printf("[SD] proba 1 (4MHz): %s\n", sd_ok ? "OK" : "FAIL");
+
+    // Próba 2: niższa - 1MHz dla starych kart
     if (!sd_ok) {
         SD.end();
-        delay(50);
-        sd_ok = SD.begin(PIN_SD_CS, SPI, 4000000);
+        delay(100);
+        sd_ok = SD.begin(PIN_SD_CS, SPI, 1000000);
+        Serial.printf("[SD] proba 2 (1MHz): %s\n", sd_ok ? "OK" : "FAIL");
     }
-    // Próba 3: domyślne ustawienia
+
+    // Próba 3: bardzo niska - 400kHz (debug mode)
     if (!sd_ok) {
         SD.end();
-        delay(50);
-        sd_ok = SD.begin(PIN_SD_CS);
+        delay(100);
+        sd_ok = SD.begin(PIN_SD_CS, SPI, 400000);
+        Serial.printf("[SD] proba 3 (400kHz): %s\n", sd_ok ? "OK" : "FAIL");
     }
-    // Próba 4: re-init SPI
+
+    // Próba 4: pełny restart SPI
     if (!sd_ok) {
         SPI.end();
-        delay(100);
+        delay(200);
         SPI.begin(PIN_SD_SCK, PIN_SD_MISO, PIN_SD_MOSI, PIN_SD_CS);
-        delay(50);
-        sd_ok = SD.begin(PIN_SD_CS, SPI, 1000000);
+        delay(100);
+        sd_ok = SD.begin(PIN_SD_CS);
+        Serial.printf("[SD] proba 4 (default): %s\n", sd_ok ? "OK" : "FAIL");
     }
 
     if (sd_ok) {
         uint8_t ct = SD.cardType();
-        Serial.printf("[SD] OK type=%d size=%lluMB\n", ct, SD.cardSize()/(1024*1024));
+        const char* tn = "?";
+        if (ct == CARD_MMC) tn = "MMC";
+        else if (ct == CARD_SD) tn = "SD";
+        else if (ct == CARD_SDHC) tn = "SDHC";
+        else if (ct == CARD_NONE) tn = "NONE";
+        Serial.printf("[SD] OK karta=%s rozmiar=%lluMB\n", tn, SD.cardSize()/(1024*1024));
     } else {
-        Serial.println("[SD] FAIL na wszystkich probach");
+        Serial.println("[SD] !!! FAIL na wszystkich probach - sprawdz: ");
+        Serial.println("[SD]   1. czy karta jest wlozona i FAT32");
+        Serial.println("[SD]   2. czy nie ma problemu z polaczeniem");
     }
     if (sd_ok) {
         SD.mkdir("/apps"); SD.mkdir("/music"); SD.mkdir("/notes");
